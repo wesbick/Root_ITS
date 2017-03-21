@@ -1,20 +1,50 @@
-library(permute); library(vegan)
+library(permute); library(vegan); library("dplyr")
 
-orddata <- read.table(file="AllChips.combined.trim.good.unique.pick.UNITEv6_sh_99_s.wang.pick.tx.1.subsample.shared1.txt", sep="	", header=T)
-dim(orddata)
-data <- orddata$Group
-data
-ord <- orddata[ ,4:254]
+source("data_setup.R")
+shared <- read.table("data/Bickford.subsample.shared", header = T, sep = "\t")
+rownames(shared) <- shared[,2]
+shared <- shared[ , -c(1:3)]
 
-head(orddata)
-orddata$Group
-data <-data.frame(Rep= c(1,2,3,4,5,6,1,2,3,4,5,6,1,2,3,1,2,3,1,3,4,5,2,3,4,5,1,2,3,1,2,3,1,2,3,1,3,1,1,1,2,3,1,2,3,1,1), data)
-data <-data.frame(Lineage= c("Inv", "Inv","Inv", "Inv","Inv", "Inv","Nat", "Nat","Nat", "Nat","Nat", "Nat", "Inv", "Inv", "Inv", "Nat", "Nat", "Nat", "Inv", "Inv", "Inv", "Inv", "Nat", "Nat", "Nat", "Nat", "Inv", "Inv", "Inv", "Nat", "Nat", "Nat", "Inv", "Inv", "Inv", "Nat", "Nat", "Inv", "Nat", "Inv", "Inv", "Inv", "Nat", "Nat", "Nat", "Inv", "Nat"), data)
-data <-data.frame(Site= c("BL", "BL","BL", "BL","BL", "BL","BL", "BL","BL", "BL","BL", "BL", "CB", "CB", "CB", "CB", "CB", "CB", "CH", "CH", "CH", "CH", "CH", "CH", "CH", "CH", "CM", "CM", "CM", "CM", "CM", "CM", "CR", "CR", "CR", "CR", "CR", "PLB", "PLB", "Rt2", "Rt2", "Rt2", "Rt2", "Rt2", "Rt2", "SB", "SB"), data)
-
-
-head(ord)
-data
-
-permfungi <- adonis(ord ~ Site * Lineage, data=data)
+permfungi <- adonis(shared ~ Site * Lineage, data=metadata)
 permfungi
+
+NMDS <- metaMDS(shared, try = 100)
+NMDS_scores <- scores(NMDS)
+
+NMDS1 <- NMDS_scores[ ,1]
+NMDS2 <- NMDS_scores[ ,2]
+
+
+fig <- ordiplot(NMDS, choices = c(1,2), type = "none", xlim = c(-1,1), ylim = c(-1.5,1.5) )
+clrs <- c(BL = "blue", CB = "red", CH = "dark green", CM = "coral", CR = "black", PLB = "orange", Rt2 = "gray", SB = "purple")
+pchs <- c(Nat = 21, Inv = 23)
+points(fig, "sites", pch = pchs[as.character(metadata$Lineage)], 
+       col = "black", bg = clrs[as.character(metadata$Site)], cex = 1.5)
+ordiellipse(NMDS, metadata$Site == "BL", show.groups = TRUE, kind = "sd", col = "blue", lty = 1, lwd = 2.0)
+ordiellipse(NMDS, metadata$Site == "CB", show.groups = TRUE, kind = "sd", col = "red", lty = 1, lwd = 2.0)
+ordiellipse(NMDS, metadata$Site == "CH", show.groups = TRUE, kind = "sd", col = "dark green", lty = 1, lwd = 2.0)
+ordiellipse(NMDS, metadata$Site == "CM", show.groups = TRUE, kind = "sd", col = "coral", lty = 1, lwd = 2.0)
+ordiellipse(NMDS, metadata$Site == "CR", show.groups = TRUE, kind = "sd", col = "black", lty = 1, lwd = 2.0)
+ordiellipse(NMDS, metadata$Site == "Rt2", show.groups = TRUE, kind = "sd", col = "gray", lty = 1, lwd = 2.0)
+
+legend_text <- c("Bullard Lake", "Cecil Bay", "Chelsea", "Cheboygan Marsh", "Castle Rock", "Point LeBarb", "Route 2", "Sturgeon Bay")
+legend("topright", legend_text, pch = 15, 
+       col = c("blue","red","dark green","coral","black","orange","gray","purple"))
+
+legend_text2 <- c("Native", "Non-Native")
+legend("topleft", legend_text2, pch = c(1,5))
+
+library(ggplot2)
+
+ggplot(data = NMDS_scores, aes(x = NMDS1, y = NMDS2, size = pop, color = metadata$Site)) +
+  geom_point()
+
+
+lin_fig <- ordiplot(NMDS, choices = c(1,2), type = "none", xlim = c(-1,1), ylim = c(-1,1) )
+clrs <- c(Nat = "blue", Inv = "red")
+points(lin_fig, "sites", pch = 19, 
+       col = clrs[as.character(metadata$Lineage)])
+ordiellipse(NMDS, metadata$Lineage == "Nat", show.groups = TRUE, kind = "sd", col = "blue", lty = 1, lwd = 2.0)
+ordiellipse(NMDS, metadata$Lineage == "Inv", show.groups = TRUE, kind = "sd", col = "red", lty = 1, lwd = 2.0)
+
+
